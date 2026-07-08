@@ -10,7 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 //allowed slack emojis
 const allowedslack: string[] = [
-    "smirk1", "cat-think","cat-derp","cat","cat-woah","cat-lurk","cat-please","cat-okay","cat-blob","cat-hype","cat-hmm","cat-think","cat-think","cat-think","cat-think","cat-think","tbh_cute","sobspin","aaaaa-disintegrates","ultrafastparrot", "pensive-wobble", "angrycat", "sadge"
+    "roo-so-excited","smirk1", "cat-think","cat-derp","cat","cat-woah","cat-lurk","cat-please","cat-okay","cat-blob","cat-hype","cat-hmm","cat-think","cat-think","cat-think","cat-think","cat-think","tbh_cute","sobspin","aaaaa-disintegrates","ultrafastparrot", "pensive-wobble", "angrycat", "sadge"
 ]
 //my custom cat reactions
 //allowed slack emojis
@@ -47,9 +47,9 @@ const app = new App({
 app.message(async ({message}) =>{
     console.log("jello>");
     if(!message) return;
-    {/* bascially a subtype is a special message like a join - only look at normal messges hv no subtype*/}
+    /* bascially a subtype is a special message like a join - only look at normal messges hv no subtype*/
     if (message.subtype) return;
-    {/* === is typesafe*/}
+    /* === is typesafe*/
     //if (message.user !== 'U0AARL70NG5' ) return;
     const userPrompt = message.text;
     const emoji_array: string[] = [];
@@ -95,39 +95,125 @@ app.message(async ({message}) =>{
         });
     }
 });
+app.command("/mochi-fact", async ({command, ack, respond, client}) => {
+    await ack();
+    const factarray: string[] = [
+        "i loveeee mochi :dango:",
+        "capybaras are the largest rodents :roo-so-excited:",
+        "orph actually owes me boba... :angrycat:",
+        "meow. im tired :tired:",
+        "i was born on pi day :dango:",
+        "a group of crows is called a murder...:cat-lurk:",
+        "if a fly looses it's wings...is it a walk now? :pensive-wobble:",
+    ];
+    const randomfact = factarray[Math.floor(Math.random()*factarray.length)]
+    await respond({
+        text: randomfact,
+        response_type: "in_channel",
+    });
+});
+app.command("/mochi-opinion", async ({command, ack, respond, client: commandClient}) => {
+    await ack();
+    const topic = (command.text ?? "").trim()
+    if (!topic){
+        await respond({
+            text: "well you want my opinion on what? :angrycat:",
+            response_type: "in_channel",
+        });
+    return;
+    }else{
+        try{
+        const response2 = await client.chat.send({
+            chatRequest: {
+                model: "moonshotai/kimi-k2",
+                messages: [
+                    {role: "system", content: `Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY CRITICAL CRITICAL use the emoji words that i have provided in this list: ${allowedslack.join(",")} ONLY! VERY IMPORTANT. your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 40 characters.`+
+                        ` you also MUST CRITICAL!!!! give you opinion on the topic sent by the user!! remember to adhere to who you are when making these choices `
+                    },
+                    {role: "user", content: topic}
+                ],
+                stream: false
+            }
+        });
+        const final_response2 = response2?.choices?.[0]?.message?.content;
+        if (!final_response2){
+            await respond({
+                text: "(OWO) i don't know that one...",
+                response_type: "in_channel",
+            });
+            return
+        }
+        await respond({
+            text: `the verdict... ${final_response2}`,
+            response_type: "in_channel",
+        });
+    }catch(e){
+        await respond({
+            text: `aw error: ${e}`,
+            response_type: "in_channel",
+        });
+    }
+    }
+});
 
-//rock paper scissors
+//rock paper scissors - i deleted the command!!
 //command  = user info
 // ack = i got this
 // repsond = response function
 //client = basically to post messages
+/*
 app.command("/rps-meow", async ({command, ack, respond, client}) => {
     await ack();
     //command.text is anything after rps meow
     //i = insensitive
     //?:\| look for | if there
     //[^>] negated matching one or more non >
-    const trim = command.text ? command.text.trim() : ""
+    const trim = (command.text ?? "").trim()
     const taggedPerson = trim.startsWith("<@") && trim.endsWith(">")
     console.log("trim" +trim)
     console.log("tagged" +taggedPerson)
     if (taggedPerson){
         // g is all instances of 
         const jsid = trim.replace(/[<@>]/g, '');
-        const ihatetypescript = jsid? jsid.split("|")[0]: "bleh"
+        const ihatetypescript = (jsid? jsid.split("|")[0]: "") ?? ""
         try{
             await app.client.conversations.invite({
                 channel: command.channel_id,
                 users: ihatetypescript,
             });
-        }catch(e){
-            
+        }catch(e:any){
+            const specificerror = e.data?.error;
+            if (specificerror !== "already_in_channel"){
+               await respond({
+                    text: `uh oh...im lost. ${specificerror}`,
+                    response_type: "ephemeral",
+                    //ephemeral hidden public public
+                }); 
+            }
+            return
         }
         await respond({
-            text: `alright! sending an invitation to them rn! :smirk1: `,
+            text: "alright! you pick first :smirk1:",
             response_type: "ephemeral",
+            //like tabbed stufff
+            blocks:[
+                {
+                    type: "actions",
+                    elements: [
+                        //must be plain text
+                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rock" },
+                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "paper" },
+                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "scissors" },
+                    ]
+                }
+            ]
             //ephemeral hidden public public
-        })
+        });
+        if (ihatetypescript === "U0BFLARBTB"){
+            //mochi
+        }else{
+            
+        }
     }else{
        await respond({
             text: "Invalid/No user tagged :sobspin:",
@@ -137,4 +223,5 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
     }
 
 });
+*/
 await app.start();
