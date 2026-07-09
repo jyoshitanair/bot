@@ -252,7 +252,8 @@ app.command("/mochi-opinion", async ({command, ack, respond, client: commandClie
 // ack = i got this
 // repsond = response function
 //client = basically to post messages
-let mochi1v1 = false
+let mochi1v1 = false;
+const choices = ["rock", "paper", "scissors"];
 app.command("/rps-meow", async ({command, ack, respond, client}) => {
     await ack();
     //command.text is anything after rps meow
@@ -274,7 +275,7 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
         if (command.channel_id.startsWith('D')){
             if (ihatetypescript !== "U0BFLARBTBM"){
                 await client.chat.postMessage({
-                text: `i can't plays rps in dms :sobspin: `,
+                text: `i can't plays rps in dms with others sorry....you can play with me though! :sobspin: `,
                 channel: command.channel_id,
                 //ephemeral hidden public public
                 }); 
@@ -318,7 +319,7 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
                     type: "section",
                     text: {
                         type: "mrkdwn",
-                        text: `alright! you pick first <@${ihatetypescript}> :smirk1:`,
+                        text: `alright! you pick first <@${command.user_id}> :smirk1:`,
                     }
                 },
                 {
@@ -343,16 +344,46 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
 
 });
 //listening for the click with an action listener! anything starting with rps_
-app.action(/^rps_/, async ({ack, body, action, client}) => { 
+app.action(/^rps_/, async ({ack, body, action, respond, client}) => { 
     await ack();
     if (action.type == "button"){
-        const user1pick = action.value;
-        console.log("user 1 pick", user1pick)
-    }
-        if (mochi1v1){
-            const mochipick = Math.floor(Math.random()*3) //0,1,2,
-            console.log("mochi pick", mochipick)
-        }else{
-        }   
+        await respond({
+            text: "Deciding your fate...",
+            replace_original: true
         })
+        const user1pick = action.value?? "rock";
+        console.log("user 1 pick", user1pick)
+        if (mochi1v1){
+            const mochipick = choices[Math.floor(Math.random()*3)] ?? "rock" //0,1,2,
+            console.log("mochi pick", mochipick)
+            const results = chooseWinner(["U0BFLARBTBM", mochipick], [body.user.id, user1pick])
+            await respond({
+                text: results,
+                replace_original: true
+            })
+
+        }else{
+        }  
+    } 
+})
+
+function chooseWinner(player1: [string,string],player2: [string,string] ):string{
+    const [p1id, p1choice] = player1;
+    const [p2id, p2choice] = player2;
+    if (p1choice == p2choice ){
+        return `wahh it's a tie! both <@${p1id}> and <@${p2id}> chose ${p1choice}`
+    }else{
+        let player1won = true
+        if ((p1choice === "rock" && p2choice === "scissors")||(p1choice === "scissors" && p2choice === "paper")||(p1choice === "paper" && p2choice === "rock")){
+           player1won = true
+        }else{
+            player1won = false
+        }
+        if (player1won){
+            return ` we have a winner! <@${p1id}> played ${p1choice} and defeated <@${p2id}> who played ${p2choice} `
+        }else{
+             return ` we have a winner! <@${p2id}> played ${p2choice} and defeated <@${p1id}> who played ${p1choice} `
+        }
+    } 
+}
 await app.start();
