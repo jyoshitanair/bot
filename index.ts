@@ -348,7 +348,7 @@ app.action(/^rps_/, async ({ack, body, action, respond, client}) => {
     await ack();
     if (action.type == "button"){
         await respond({
-            text: "Deciding your fate...",
+            text: "Waiting on other player...",
             replace_original: true
         })
         const user1pick = action.value?? "rock";
@@ -363,6 +363,7 @@ app.action(/^rps_/, async ({ack, body, action, respond, client}) => {
             })
 
         }else{
+            //send message to them too 
         }  
     } 
 })
