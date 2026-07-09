@@ -1,4 +1,4 @@
-import { App} from "@slack/bolt";
+import { App, LogLevel} from "@slack/bolt";
 import { OpenRouter} from "@openrouter/sdk"
 import { WebClient } from "@slack/web-api"
 
@@ -41,6 +41,7 @@ const app = new App({
     token: process.env.SLACK_TOKEN,
     appToken: process.env.SLACK_APP_TOKEN,
     socketMode: true,
+    logLevel: LogLevel.DEBUG,
 });
 
 // define the logic for our app
@@ -54,7 +55,7 @@ app.message(async ({message}) =>{
     const userPrompt = message.text;
     const emoji_array: string[] = [];
     if (!userPrompt) return;
-    if (!userPrompt.includes("@U0BFLARBTB")) return;
+    if (!userPrompt.includes("@U0BFLARBTBM")) return;
     console.log("pass>");
     try{
         for(const [keyword, emoji] of Object.entries(slackemoji)){
@@ -251,7 +252,7 @@ app.command("/mochi-opinion", async ({command, ack, respond, client: commandClie
 // ack = i got this
 // repsond = response function
 //client = basically to post messages
-/*
+let mochi1v1 = false
 app.command("/rps-meow", async ({command, ack, respond, client}) => {
     await ack();
     //command.text is anything after rps meow
@@ -265,45 +266,73 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
     if (taggedPerson){
         // g is all instances of 
         const jsid = trim.replace(/[<@>]/g, '');
+        //user tagged
         const ihatetypescript = (jsid? jsid.split("|")[0]: "") ?? ""
-        try{
-            await app.client.conversations.invite({
+        //dms start with d, groups start with c, private is c too ?
+        console.log(command.channel_id)
+        console.log(ihatetypescript)
+        if (command.channel_id.startsWith('D')){
+            if (ihatetypescript !== "U0BFLARBTBM"){
+                await client.chat.postMessage({
+                text: `i can't plays rps in dms :sobspin: `,
                 channel: command.channel_id,
-                users: ihatetypescript,
-            });
-        }catch(e:any){
-            const specificerror = e.data?.error;
-            if (specificerror !== "already_in_channel"){
-               await respond({
-                    text: `uh oh...im lost. ${specificerror}`,
-                    response_type: "ephemeral",
-                    //ephemeral hidden public public
+                //ephemeral hidden public public
                 }); 
-            }
             return
+            }else{
+                mochi1v1 = true
+            }
         }
+        if (!mochi1v1){
+            try{
+                await app.client.conversations.invite({
+                    channel: command.channel_id,
+                    users: ihatetypescript,
+                });
+            }catch(e:any){
+                const specificerror = e.data?.error;
+                if (specificerror !== "already_in_channel" || specificerror !== "cant_invite_self"){
+                await respond({
+                        text: `uh oh...im lost. ${specificerror}`,
+                        response_type: "ephemeral",
+                        //ephemeral hidden public public
+                    }); 
+                }
+                return
+            }
+        }
+        //all pass
+        if (ihatetypescript === "U0BFLARBTBM"){
+            mochi1v1 = true
+        }else{
+            mochi1v1 = false   
+        }
+        console.log(mochi1v1)
+        //group stuff 
         await respond({
-            text: "alright! you pick first :smirk1:",
+            text: "rock paper scissors battle!",
             response_type: "ephemeral",
             //like tabbed stufff
             blocks:[
                 {
+                    type: "section",
+                    text: {
+                        type: "mrkdwn",
+                        text: `alright! you pick first <@${ihatetypescript}> :smirk1:`,
+                    }
+                },
+                {
                     type: "actions",
                     elements: [
                         //must be plain text
-                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rock" },
-                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "paper" },
-                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "scissors" },
+                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rps_rock", value: "rock" },
+                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "rps_paper", value: "paper" },
+                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "rps_scissors", value: "scissors" },
                     ]
                 }
             ]
             //ephemeral hidden public public
         });
-        if (ihatetypescript === "U0BFLARBTB"){
-            //mochi
-        }else{
-            
-        }
     }else{
        await respond({
             text: "Invalid/No user tagged :sobspin:",
@@ -313,5 +342,17 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
     }
 
 });
-*/
+//listening for the click with an action listener! anything starting with rps_
+app.action(/^rps_/, async ({ack, body, action, client}) => { 
+    await ack();
+    if (action.type == "button"){
+        const user1pick = action.value;
+        console.log("user 1 pick", user1pick)
+    }
+        if (mochi1v1){
+            const mochipick = Math.floor(Math.random()*3) //0,1,2,
+            console.log("mochi pick", mochipick)
+        }else{
+        }   
+        })
 await app.start();
