@@ -131,22 +131,29 @@ app.message(async ({message}) =>{
                     return;
                 }
             }
-            //case 1 update fact
+            //case 2 update fact
             //always string
+            
             const key2 = Object.keys(facts_update || {})[0]?? "";
+            console.log(key2) ///favorite food
+            console.log(facts_update) //full string
             if (facts_update && key2.length > 0 ){
-                const{data: datameow, error: errormeow3} = await supabase.from('userinfo').select('id').eq('slackid', message.user).not(`message->>${key2}`,"is", null) //this message thingy checks inside the message json field for the key key2 and if its there it returns the id. it checks if it is null lor not
+                const{data: datameow, error: errormeow3} = await supabase.from('userinfo').select('id').eq('slackid', message.user).like("message", `%"${key2}"%`) // and it must have quotes around it!! it checks if the message field contains key two and doesn't care about stuff before and after it! smart! ahh forget thisthis message thingy checks inside the message json field for the key key2 and if its there it returns the id. it checks if it is null lor not
                 const datameower = datameow as {id:any}[] | null | undefined;
-                const uniqueid = (datameower && datameower.length >0)? datameower[0]?.id : ""
-                const {error: errormeow2} = await supabase.from('userinfo').update({
-                    "message": JSON.stringify(facts_update),
-                }).eq('id', uniqueid)
-                if (errormeow2){
-                    await userClient.chat.postMessage({
-                        channel: message.channel,
-                        text: `uh oh. something messed up! but it's not my fault :tired: ${errormeow2.message}`,
-                    });
-                    return;
+                const uniqueid = (datameower && datameower.length >0)? datameower[0]?.id : null
+                console.log("no unique idd")
+                if (uniqueid){
+                    const {error: errormeow2} = await supabase.from('userinfo').update({
+                        "message": JSON.stringify(facts_update),
+                    }).eq('id', uniqueid)
+                    console.log(uniqueid)
+                    if (errormeow2){
+                        await userClient.chat.postMessage({
+                            channel: message.channel,
+                            text: `uh oh. something messed up! 2 but it's not my fault :tired: ${errormeow2.message}`,
+                        });
+                        return;
+                    }
                 }
                 if (errormeow3){
                     await userClient.chat.postMessage({
