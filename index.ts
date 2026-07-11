@@ -107,14 +107,14 @@ const slackemoji: { [key: string]: string } = {
     "sad": "sobspin",
     "dopple": "doppel-pet",
 };
-const userClient = new WebClient(process.env.SLACK_USER_TOKEN);
+const userClient = new WebClient(Bun.env.SLACK_USER_TOKEN);
 const client = new OpenRouter ({
-    apiKey: process.env.API_KEY,
+    apiKey: Bun.env.API_KEY,
     serverURL: "https://ai.hackclub.com/proxy/v1",
 });
 const app = new App({
-    token: process.env.SLACK_TOKEN,
-    appToken: process.env.SLACK_APP_TOKEN,
+    token: Bun.env.SLACK_TOKEN,
+    appToken: Bun.env.SLACK_APP_TOKEN,
     socketMode: true,
     logLevel: LogLevel.DEBUG,
 });
@@ -250,7 +250,7 @@ app.message(async ({message}) =>{
                 }
             }
             //message
-            await (client as any).chat.postMessage({
+            await userClient.chat.postMessage({
                 channel: message.channel,
                 text: final_msg,
             });
