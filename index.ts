@@ -250,7 +250,7 @@ app.message(async ({message}) =>{
                 }
             }
             //message
-            await userClient.chat.postMessage({
+            await (client as any).chat.postMessage({
                 channel: message.channel,
                 text: final_msg,
             });
