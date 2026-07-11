@@ -155,7 +155,7 @@ app.message(async ({message}) =>{
                 model: "deepseek/deepseek-v4-pro",
                 responseFormat: {type: "json_object"}, //kimi you BETTER use jsons around here....
                 messages: [
-                    {role: "system", content: `Personality:Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY use the emoji words that i have provided in this list: ${allowedslack.join(",")} your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 30 characters.`+
+                    {role: "system", content: `You are a strict JSON generator. Personality:Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY use the emoji words that i have provided in this list: ${allowedslack.join(",")} your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 30 characters.`+
                         ` you MUST use the emojis in this list, each atleast once in your response in the best positioning that you see fit. If the list is empty it is up to your discretion if you would like to add anything or not.CRITICAL IF YOU NEED MORE CHARACTERS FOR THIS IT IS OKAY !! List: ${emoji_array.join(",")} and use emojies in this format :emoji_name:`+
                         "CRITICAL: DO NOT USE BAD WORDS OR CURSE OR SAY ANYTHING MEAN TO ANYONE!"+
                         `IMPORTANT: this is what you know about the user. Base your personality and opinions to them based on this: ${memory}`+
@@ -169,7 +169,7 @@ app.message(async ({message}) =>{
                                 '"EXACT_OLD_SHORT_IDENTIFIER_KEYWORD": "UPDATED_VALUE"\n'+
                         '   }\n'+    
                         '}\n'+
-                        'If there are no new updated facts or anything that is not important about the user leave the fields new_facts and updated_valules BLANK! If there is an updated value then LEAVE NEW FACTS BLANK!!!. only put text in the updated value!'
+                        'If there are no new updated facts or anything that is not important about the user leave the fields new_facts and updated_valules BLANK! Any information provided to you can EITHER be a new fact or an updated fact. Not both. for example if the user wants to update their favorite color that is only an updated fact. However if there are BOTH new facts AND updated facts then you may fill out BOTH fields :D'
                         
                     },
                     {role: "user", content: userPrompt}
@@ -193,11 +193,16 @@ app.message(async ({message}) =>{
             const facts_update = parsed.updated_facts;
             //add new facts to db
             //case 1 new fact
-            const key = Object.keys(facts_add || {})[0]?? "";
-            if (facts_add && key.length > 0 ){
+            const setter = Object.keys(facts_add || {})?? "";
+            if (facts_add && setter.length > 0 ){
+                for (const [key, value] of Object.entries(facts_add)){
+                    if (!key){
+                        continue
+                    }
+                    const singlefact = {[key]:value}
                 const {error: errormeow} = await supabase.from('userinfo').insert([{
                     "slackid": message.user,
-                    "message": JSON.stringify(facts_add),
+                    "message": JSON.stringify(singlefact),
                 }]);
                 if (errormeow){
                     await userClient.chat.postMessage({
@@ -206,21 +211,26 @@ app.message(async ({message}) =>{
                     });
                     return;
                 }
-            }
+            }}
             //case 2 update fact
             //always string
             
-            const key2 = Object.keys(facts_update || {})[0]?? "";
-            console.log(key2) ///favorite food
+            const setter2 = Object.keys(facts_update || {})?? "";
+            console.log(setter2) ///favorite food
             console.log(facts_update) //full string
-            if (facts_update && key2.length > 0 ){
+            if (facts_update && setter2.length > 0 ){
+                for (const [key2, value2] of Object.entries(facts_update)){
+                    if (!key2){
+                        continue
+                    }
+                const singlefact2 = {[key2]:value2}
                 const{data: datameow, error: errormeow3} = await supabase.from('userinfo').select('id').eq('slackid', message.user).like("message", `%"${key2}"%`) // and it must have quotes around it!! it checks if the message field contains key two and doesn't care about stuff before and after it! smart! ahh forget thisthis message thingy checks inside the message json field for the key key2 and if its there it returns the id. it checks if it is null lor not
                 const datameower = datameow as {id:any}[] | null | undefined;
                 const uniqueid = (datameower && datameower.length >0)? datameower[0]?.id : null
                 console.log("no unique idd")
                 if (uniqueid){
                     const {error: errormeow2} = await supabase.from('userinfo').update({
-                        "message": JSON.stringify(facts_update),
+                        "message": JSON.stringify(singlefact2),
                     }).eq('id', uniqueid)
                     console.log(uniqueid)
                     if (errormeow2){
@@ -245,7 +255,7 @@ app.message(async ({message}) =>{
                 text: final_msg,
             });
 
-        }catch(e){
+        }}catch(e){
             await userClient.chat.postMessage({
                 channel: message.channel,
                 text: `mochi is tired...maybe we talk later?`,
