@@ -108,6 +108,9 @@ const slackemoji: { [key: string]: string } = {
     "dopple": "doppel-pet",
 };
 const userClient = new WebClient(Bun.env.SLACK_USER_TOKEN);
+const XOXDclient = new WebClient(Bun.env.SLACK_XOXC_TOKEN, {
+    headers: { Cookie: `d=${process.env.SLACK_XOXD_TOKEN}` }
+})
 const client = new OpenRouter ({
     apiKey: Bun.env.API_KEY,
     serverURL: "https://ai.hackclub.com/proxy/v1",
@@ -118,8 +121,16 @@ const app = new App({
     socketMode: true,
     logLevel: LogLevel.DEBUG,
 });
-
+/*
 // define the logic for our app
+app.message(async (event) => {
+    if (event.payload.subtype) return;
+    await XOXDclient.chat.postMessage({
+        channel: event.payload.channel,
+        text: 'meoww :3'
+    })
+});
+*/
 app.message(async ({message}) =>{
     console.log("jello>");
     if(!message) return;
@@ -130,7 +141,7 @@ app.message(async ({message}) =>{
     const userPrompt = message.text;
     const emoji_array: string[] = [];
     if (!userPrompt) return;
-    if (!userPrompt.includes("@U0BFLARBTBM")) return;
+    if (!userPrompt.includes("@U0BFLARBTBM") || !userPrompt.includes("@U0BGMCGFJ1K")) return;
     console.log("pass>");
     try{
         for(const [keyword, emoji] of Object.entries(slackemoji)){
@@ -189,6 +200,13 @@ app.message(async ({message}) =>{
         try{
             const parsed = JSON.parse(final_response);
             const final_msg = parsed.response;
+            if (final_msg){
+                //message
+                await userClient.chat.postMessage({
+                channel: message.channel,
+                text: final_msg,
+            });
+            }
             const facts_add = parsed.new_facts;
             const facts_update = parsed.updated_facts;
             //add new facts to db
@@ -249,11 +267,6 @@ app.message(async ({message}) =>{
                     return;
                 }
             }
-            //message
-            await userClient.chat.postMessage({
-                channel: message.channel,
-                text: final_msg,
-            });
 
         }}catch(e){
             await userClient.chat.postMessage({
@@ -282,18 +295,18 @@ app.command("/mochi-fact", async ({command, ack, respond, client}) => {
         "if a fly looses it's wings...is it a walk now? :pensive-wobble:",
     ];
     const randomfact = factarray[Math.floor(Math.random()*factarray.length)]
-    await respond({
-        text: randomfact,
-        response_type: "in_channel",
+    await userClient.chat.postMessage({
+        channel: String(command.channel_id),
+        text: String(randomfact),
     });
 });
 app.command("/mochi-opinion", async ({command, ack, respond, client: commandClient}) => {
     await ack();
     const topic = (command.text ?? "").trim()
     if (!topic){
-        await respond({
+        await userClient.chat.postMessage({
+            channel: String(command.channel_id),
             text: "well you want my opinion on what? :angrycat:",
-            response_type: "in_channel",
         });
     return;
     }else{
@@ -313,20 +326,20 @@ app.command("/mochi-opinion", async ({command, ack, respond, client: commandClie
         });
         const final_response2 = response2?.choices?.[0]?.message?.content;
         if (!final_response2){
-            await respond({
+            await userClient.chat.postMessage({
+                channel: String(command.channel_id),
                 text: "(OWO) i don't know that one...",
-                response_type: "in_channel",
             });
             return
         }
-        await respond({
+        await userClient.chat.postMessage({
+            channel: String(command.channel_id),
             text: `the verdict... ${final_response2}`,
-            response_type: "in_channel",
         });
     }catch(e){
-        await respond({
+        await userClient.chat.postMessage({
+            channel: String(command.channel_id),
             text: `aw error: ${e}`,
-            response_type: "in_channel",
         });
     }
     }
@@ -358,17 +371,16 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
         console.log(ihatetypescript)
         const gameKey = `${command.channel_id}-${command.user_id}-${ihatetypescript}`
         if (activeGames.has(gameKey)){
-            await respond({
-                text: `silly you're already in a battle with <@${ihatetypescript}>! finish that first`,
-                response_type: "ephemeral",
-                //ephemeral hidden public public
-            }); 
+            await userClient.chat.postMessage({
+                channel: String(command.channel_id),
+                text: `silly you're already in a battle with <@${ihatetypescript}>! finish that first`
+            });
             return
         }
         const game = new NewGame(gameKey, command.channel_id)
         if (command.channel_id.startsWith('D')){
             if (ihatetypescript !== "U0BFLARBTBM"){
-                await client.chat.postMessage({
+                await userClient.chat.postMessage({
                 text: `i can't plays rps in dms with others sorry....you can play with me though! :sobspin: `,
                 channel: command.channel_id,
                 //ephemeral hidden public public
@@ -387,11 +399,11 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
             }catch(e:any){
                 const specificerror = e.data?.error;
                 if (specificerror !== "already_in_channel" && specificerror !== "cant_invite_self"){
-                await respond({
-                        text: `uh oh...im lost. ${specificerror}`,
-                        response_type: "ephemeral",
-                        //ephemeral hidden public public
-                }); 
+                await userClient.chat.postEphemeral({
+                    channel: String(command.channel_id),
+                    text: `uh oh...im lost. ${specificerror}`,
+                    user: String(command.user_id),
+                });
                 return
                 }
 
@@ -407,7 +419,7 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
         activeGames.set(gameKey, game)
         console.log(game.mochi1v1)
         if (!game.mochi1v1){
-            await client.chat.postEphemeral ({
+            await userClient.chat.postEphemeral ({
                 channel: command.channel_id,
                 user: ihatetypescript,
                 blocks:[
@@ -432,9 +444,10 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
         }
         
         //group stuff 
-        await respond({
+        await userClient.chat.postEphemeral({
+            channel: String(command.channel_id),
+            user: String(command.user_id),
             text: "rock paper scissors battle!",
-            response_type: "ephemeral",
             //like tabbed stufff
             blocks:[
                 {
@@ -457,11 +470,10 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
             //ephemeral hidden public public
         });
     }else{
-       await respond({
+        await userClient.chat.postMessage({
+            channel: command.channel_id,
             text: "Invalid/No user tagged :sobspin:",
-            response_type: "ephemeral",
-            //ephemeral hidden public public
-        }) 
+        });
     }
 
 });
