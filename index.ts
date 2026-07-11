@@ -7,7 +7,12 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = Bun.env.SUPABASE_URL || ""
 const supabaseKey = Bun.env.SUPABASE_PUBLISHABLE_KEY || ""
 const supabase = createClient(supabaseUrl, supabaseKey)
-
+let p2Responded = false
+let p1Responded = false
+let user1pick = "rock"
+let user2pick = "rock"
+let user1id = "U0BFLARBTBM"
+let user2id = "U0BFLARBTBM"
 //allowed slack emojis
 const allowedslack: string[] = [
     "roo-so-excited","smirk1", "cat-think","cat-derp","cat","cat-woah","cat-lurk","cat-please","cat-okay","cat_blob","cat-hype","cat-hmm","cat-think","cat-think","cat-think","cat-think","cat-think","tbh_cute","sobspin","aaaaa-disintegrates","ultrafastparrot", "pensive-wobble", "angrycat", "sadge"
@@ -292,14 +297,15 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
                 });
             }catch(e:any){
                 const specificerror = e.data?.error;
-                if (specificerror !== "already_in_channel" || specificerror !== "cant_invite_self"){
+                if (specificerror !== "already_in_channel" && specificerror !== "cant_invite_self"){
                 await respond({
                         text: `uh oh...im lost. ${specificerror}`,
                         response_type: "ephemeral",
                         //ephemeral hidden public public
                     }); 
+                    return
                 }
-                return
+
             }
         }
         //all pass
@@ -309,6 +315,31 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
             mochi1v1 = false   
         }
         console.log(mochi1v1)
+        if (!mochi1v1){
+            await client.chat.postEphemeral ({
+                channel: command.channel_id,
+                user: ihatetypescript,
+                blocks:[
+                {
+                    type: "section",
+                    text: {
+                        type: "mrkdwn",
+                        text: `you've been challenged to a rock paper scissors battle by <@${command.user_id}> :meow-party:`,
+                    }
+                },
+                {
+                    type: "actions",
+                    elements: [
+                        //must be plain text
+                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rps2_rock", value: "rock" },
+                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "rps2_paper", value: "paper" },
+                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "rps2_scissors", value: "scissors" },
+                    ]
+                }
+            ]
+            });
+        }
+        
         //group stuff 
         await respond({
             text: "rock paper scissors battle!",
@@ -343,15 +374,47 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
     }
 
 });
+app.action(/^rps2_/, async ({ack, body, action, respond, client}) => { 
+    await ack();
+    user2id = body.user.id
+    if (action.type == "button"){
+        p2Responded = true
+        await respond({
+            text: "Waiting on other player...",
+            replace_original: true
+        })
+        user2pick = action.value?? "rock";
+        console.log("user 2 pick", user2pick)
+        noMochiCheck(body.channel?.id ?? "C0BFVKZ9JCR")
+    }
+});
+async function noMochiCheck(channel_id:string){
+    console.log("checking")
+    if (p1Responded && p2Responded){
+        const results = chooseWinner([user2id, user2pick], [user1id, user1pick])
+        await userClient.chat.postEphemeral({
+            channel: channel_id,
+            user: user2id, 
+            text: results,
+        });
+        await userClient.chat.postEphemeral({
+            channel: channel_id,
+            user: user1id, 
+            text: results,
+        });
+    }
+}
 //listening for the click with an action listener! anything starting with rps_
 app.action(/^rps_/, async ({ack, body, action, respond, client}) => { 
     await ack();
+    p1Responded = true
+    user1id = body.user.id
     if (action.type == "button"){
         await respond({
             text: "Waiting on other player...",
             replace_original: true
         })
-        const user1pick = action.value?? "rock";
+        user1pick = action.value?? "rock";
         console.log("user 1 pick", user1pick)
         if (mochi1v1){
             const mochipick = choices[Math.floor(Math.random()*3)] ?? "rock" //0,1,2,
@@ -363,7 +426,7 @@ app.action(/^rps_/, async ({ack, body, action, respond, client}) => {
             })
 
         }else{
-            //send message to them too 
+           noMochiCheck(body.channel?.id ?? "C0BFVKZ9JCR")
         }  
     } 
 })
