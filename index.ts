@@ -7,12 +7,68 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = Bun.env.SUPABASE_URL || ""
 const supabaseKey = Bun.env.SUPABASE_PUBLISHABLE_KEY || ""
 const supabase = createClient(supabaseUrl, supabaseKey)
-let p2Responded = false
-let p1Responded = false
-let user1pick = "rock"
-let user2pick = "rock"
-let user1id = "U0BFLARBTBM"
-let user2id = "U0BFLARBTBM"
+
+const activeGames = new Map<string, NewGame>();
+class NewGame{
+    public p2Responded:boolean = false;
+    public p1Responded:boolean = false;
+    public user1pick:string = "rock";
+    public user2pick:string = "rock";
+    //game specific
+    public user1id:string = "U0BFLARBTBM";
+    public user2id:string = "U0BFLARBTBM";
+    public gameKey:string = "";
+    public channel:string = "C0BFVKZ9JCR";
+    public mochi1v1:boolean = false;
+    constructor(gameKey1:string, channel1:string){
+        this.gameKey = gameKey1;
+        this.channel = channel1;
+    }
+    setU1pick(pick:string){
+        this.user1pick = pick;
+        this.p1Responded = true;
+    }
+    setU2pick(pick:string){
+        this.user2pick = pick;
+        this.p2Responded = true;
+    }
+    setMochi(mochi:boolean){
+        this.mochi1v1 = mochi;
+    }
+    setversus(p1id:string, p2id:string){
+       this.user1id = p1id;
+        this.user2id = p2id;
+    }
+    public async finalCheck(){
+        if (this.p1Responded && this.p2Responded){
+            //MEOWW
+            const results = chooseWinner([this.user2id, this.user2pick], [this.user1id, this.user1pick])
+            await userClient.chat.postEphemeral({
+                channel: this.channel,
+                user: this.user2id, 
+                text: results,
+            });
+            await userClient.chat.postEphemeral({
+                channel: this.channel,
+                user: this.user1id, 
+                text: results,
+            });
+            activeGames.delete(this.gameKey)
+        }else if (this.mochi1v1 && this.p1Responded){
+            //MOCHIER
+            const mochipick = choices[Math.floor(Math.random()*3)] ?? "rock" //0,1,2,
+            console.log("mochi pick", mochipick)
+            const results = chooseWinner(["U0BFLARBTBM", mochipick], [this.user1id, this.user1pick])
+            await userClient.chat.postEphemeral({
+                channel: this.channel,
+                user: this.user1id, 
+                text: results,
+            });
+            activeGames.delete(this.gameKey)
+        }
+    }
+}
+
 //allowed slack emojis
 const allowedslack: string[] = [
     "roo-so-excited","smirk1", "cat-think","cat-derp","cat","cat-woah","cat-lurk","cat-please","cat-okay","cat_blob","cat-hype","cat-hmm","cat-think","cat-think","cat-think","cat-think","cat-think","tbh_cute","sobspin","aaaaa-disintegrates","ultrafastparrot", "pensive-wobble", "angrycat", "sadge"
@@ -252,15 +308,16 @@ app.command("/mochi-opinion", async ({command, ack, respond, client: commandClie
     }
 });
 
-//rock paper scissors - i deleted the command!!
+//rock paper scissors
 //command  = user info
 // ack = i got this
 // repsond = response function
 //client = basically to post messages
-let mochi1v1 = false;
 const choices = ["rock", "paper", "scissors"];
 app.command("/rps-meow", async ({command, ack, respond, client}) => {
     await ack();
+    const gameKey = `${command.channel_id}-${command.user_id}`
+    const game = new NewGame(gameKey, command.channel_id)
     //command.text is anything after rps meow
     //i = insensitive
     //?:\| look for | if there
@@ -286,10 +343,10 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
                 }); 
             return
             }else{
-                mochi1v1 = true
+                game.setMochi(true)
             }
         }
-        if (!mochi1v1){
+        if (!game.mochi1v1){
             try{
                 await app.client.conversations.invite({
                     channel: command.channel_id,
@@ -310,12 +367,14 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
         }
         //all pass
         if (ihatetypescript === "U0BFLARBTBM"){
-            mochi1v1 = true
+            game.setMochi(true)
         }else{
-            mochi1v1 = false   
+            game.setMochi(false) 
         }
-        console.log(mochi1v1)
-        if (!mochi1v1){
+        game.setversus(command.user_id, ihatetypescript)
+        activeGames.set(gameKey, game)
+        console.log(game.mochi1v1)
+        if (!game.mochi1v1){
             await client.chat.postEphemeral ({
                 channel: command.channel_id,
                 user: ihatetypescript,
@@ -390,44 +449,20 @@ app.action(/^rps2_/, async ({ack, body, action, respond, client}) => {
 });
 async function noMochiCheck(channel_id:string){
     console.log("checking")
-    if (p1Responded && p2Responded){
-        const results = chooseWinner([user2id, user2pick], [user1id, user1pick])
-        await userClient.chat.postEphemeral({
-            channel: channel_id,
-            user: user2id, 
-            text: results,
-        });
-        await userClient.chat.postEphemeral({
-            channel: channel_id,
-            user: user1id, 
-            text: results,
-        });
-    }
+    //MEOWWW
 }
 //listening for the click with an action listener! anything starting with rps_
 app.action(/^rps_/, async ({ack, body, action, respond, client}) => { 
     await ack();
-    p1Responded = true
-    user1id = body.user.id
     if (action.type == "button"){
+        var action_value = action.value
+        const game = activeGames.get(action_value?.split("_")[0]?? "")
+        const currentPick = action_value?.split("_")[1]?? "rock";
         await respond({
             text: "Waiting on other player...",
             replace_original: true
         })
-        user1pick = action.value?? "rock";
-        console.log("user 1 pick", user1pick)
-        if (mochi1v1){
-            const mochipick = choices[Math.floor(Math.random()*3)] ?? "rock" //0,1,2,
-            console.log("mochi pick", mochipick)
-            const results = chooseWinner(["U0BFLARBTBM", mochipick], [body.user.id, user1pick])
-            await respond({
-                text: results,
-                replace_original: true
-            })
-
-        }else{
-           noMochiCheck(body.channel?.id ?? "C0BFVKZ9JCR")
-        }  
+        game?.setU1pick(currentPick)
     } 
 })
 
