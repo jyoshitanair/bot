@@ -10,6 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 const activeGames = new Map<string, NewGame>();
 class NewGame{
+    private timer: Timer = setTimeout(() => {}, 0);
     public p2Responded:boolean = false;
     public p1Responded:boolean = false;
     public user1pick:string = "rock";
@@ -23,6 +24,17 @@ class NewGame{
     constructor(gameKey1:string, channel1:string){
         this.gameKey = gameKey1;
         this.channel = channel1;
+        this.timer = setTimeout(() => {
+            if(activeGames.has(this.gameKey)){
+                activeGames.delete(this.gameKey)
+                console.log("bye bye")
+            }
+        }, 300000);
+    }
+    clearTimer(){
+        if (this.timer){
+            clearTimeout(this.timer)
+        }
     }
     setU1pick(pick:string){
         this.user1pick = pick;
@@ -42,7 +54,7 @@ class NewGame{
     public async finalCheck(){
         if (this.p1Responded && this.p2Responded){
             //MEOWW
-            const results = chooseWinner([this.user2id, this.user2pick], [this.user1id, this.user1pick])
+            const results = chooseWinner([this.user1id, this.user1pick], [this.user2id, this.user2pick])
             await userClient.chat.postEphemeral({
                 channel: this.channel,
                 user: this.user2id, 
@@ -54,6 +66,7 @@ class NewGame{
                 text: results,
             });
             activeGames.delete(this.gameKey)
+            this.clearTimer()
         }else if (this.mochi1v1 && this.p1Responded){
             //MOCHIER
             const mochipick = choices[Math.floor(Math.random()*3)] ?? "rock" //0,1,2,
@@ -65,6 +78,7 @@ class NewGame{
                 text: results,
             });
             activeGames.delete(this.gameKey)
+            this.clearTimer()
         }
     }
 }
@@ -316,8 +330,6 @@ app.command("/mochi-opinion", async ({command, ack, respond, client: commandClie
 const choices = ["rock", "paper", "scissors"];
 app.command("/rps-meow", async ({command, ack, respond, client}) => {
     await ack();
-    const gameKey = `${command.channel_id}-${command.user_id}`
-    const game = new NewGame(gameKey, command.channel_id)
     //command.text is anything after rps meow
     //i = insensitive
     //?:\| look for | if there
@@ -334,6 +346,16 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
         //dms start with d, groups start with c, private is c too ?
         console.log(command.channel_id)
         console.log(ihatetypescript)
+        const gameKey = `${command.channel_id}-${command.user_id}-${ihatetypescript}`
+        if (activeGames.has(gameKey)){
+            await respond({
+                text: `silly you're already in a battle with <@${ihatetypescript}>! finish that first`,
+                response_type: "ephemeral",
+                //ephemeral hidden public public
+            }); 
+            return
+        }
+        const game = new NewGame(gameKey, command.channel_id)
         if (command.channel_id.startsWith('D')){
             if (ihatetypescript !== "U0BFLARBTBM"){
                 await client.chat.postMessage({
@@ -359,8 +381,8 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
                         text: `uh oh...im lost. ${specificerror}`,
                         response_type: "ephemeral",
                         //ephemeral hidden public public
-                    }); 
-                    return
+                }); 
+                return
                 }
 
             }
@@ -390,9 +412,9 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
                     type: "actions",
                     elements: [
                         //must be plain text
-                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rps2_rock", value: "rock" },
-                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "rps2_paper", value: "paper" },
-                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "rps2_scissors", value: "scissors" },
+                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rps2_rock", value: `${gameKey}_rock` },
+                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "rps2_paper", value:`${gameKey}_paper` },
+                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "rps2_scissors", value: `${gameKey}_scissors` },
                     ]
                 }
             ]
@@ -416,9 +438,9 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
                     type: "actions",
                     elements: [
                         //must be plain text
-                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rps_rock", value: "rock" },
-                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "rps_paper", value: "paper" },
-                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "rps_scissors", value: "scissors" },
+                        { type: "button", text: { type: "plain_text", text: "rock"}, action_id: "rps_rock", value: `${gameKey}_rock` },
+                        { type: "button", text: { type: "plain_text", text: "paper"}, action_id: "rps_paper", value: `${gameKey}_paper` },
+                        { type: "button", text: { type: "plain_text", text: "scissors"}, action_id: "rps_scissors", value: `${gameKey}_scissors` },
                     ]
                 }
             ]
@@ -435,34 +457,48 @@ app.command("/rps-meow", async ({command, ack, respond, client}) => {
 });
 app.action(/^rps2_/, async ({ack, body, action, respond, client}) => { 
     await ack();
-    user2id = body.user.id
     if (action.type == "button"){
-        p2Responded = true
+        var action_value = action.value
+        const game = activeGames.get(action_value?.split("_")[0]?? "")
+        if (!game){
+            await respond({
+                text: "This game has timed out :sobspin:",
+                replace_original: true
+            });
+            return
+        }
+        const currentPick = action_value?.split("_")[1]?? "rock";
         await respond({
             text: "Waiting on other player...",
             replace_original: true
         })
-        user2pick = action.value?? "rock";
-        console.log("user 2 pick", user2pick)
-        noMochiCheck(body.channel?.id ?? "C0BFVKZ9JCR")
+        game?.setU2pick(currentPick)
+        await game?.finalCheck()
     }
 });
-async function noMochiCheck(channel_id:string){
-    console.log("checking")
-    //MEOWWW
-}
 //listening for the click with an action listener! anything starting with rps_
 app.action(/^rps_/, async ({ack, body, action, respond, client}) => { 
     await ack();
     if (action.type == "button"){
         var action_value = action.value
         const game = activeGames.get(action_value?.split("_")[0]?? "")
+        //check for timer
+
+        if (!game){
+            await respond({
+                text: "This game has timed out :sobspin:",
+                replace_original: true
+            });
+            return
+        }
+        
         const currentPick = action_value?.split("_")[1]?? "rock";
         await respond({
             text: "Waiting on other player...",
             replace_original: true
         })
         game?.setU1pick(currentPick)
+        await game?.finalCheck()
     } 
 })
 
