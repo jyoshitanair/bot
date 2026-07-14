@@ -3,6 +3,28 @@ import { chromium } from "playwright"
 import { OpenRouter } from "@openrouter/sdk"
 import { WebClient } from "@slack/web-api"
 import axios from 'axios';
+let lastsong = ""
+//songsss
+
+async function getSong(){
+    try{
+        const urlugh =  await axios.get(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${Bun.env.LAST_FM_USERNAME}&api_key=${Bun.env.LAST_FM_API}&format=json&limit=1`);
+        const latestTrack = urlugh?.data?.recenttracks?.track?.[0];
+        if(latestTrack && latestTrack['@attr'].nowplaying === true){
+            console.log(latestTrack)
+            
+            //"@attr": {
+            //nowplaying: "true",
+
+        }
+    }catch(err){
+
+    }
+}
+
+
+
+
 
 //supabase
 import { createClient } from '@supabase/supabase-js'
@@ -134,6 +156,7 @@ app.message(async (event) => {
 */
 app.message(async ({ message }) => {
     console.log("jello>");
+    getSong()
     if (!message) return;
     /* bascially a subtype is a special message like a join - only look at normal messges hv no subtype*/
     if (message.subtype) return;
@@ -552,34 +575,38 @@ function chooseWinner(player1: [string, string], player2: [string, string]): str
 app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
     await ack()
     try {
-        const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}; d-s=${Bun.env.SLACK_XOXD_S_TOKEN ?? ""}`
+        const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}`
         const Formdos = new URLSearchParams
         Formdos.append('presence', 'auto')
+        Formdos.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         const meow = await axios.post(
             'https://hackclub.slack.com/api/users.setPresence',
             Formdos, //no data
             { 
                 headers:{
-                    'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
+                    //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
                     'Cookie': cookieformatted,
                         //read as form not json 
                     'Content-Type': 'application/x-www-form-urlencoded',
                         //windows + chrome
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Origin': 'https://app.slack.com',
+                    'Referer': 'https://app.slack.com/',
                 }
             }
         )
+        console.log("ps")
         console.log(meow.data)
         //real
             //slack rooms needs a form? 
             const Form = new URLSearchParams
             //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+            Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
             Form.append('channel_id', command.channel_id)
             Form.append('active', 'true')
             Form.append('background-sharing', 'false')
             Form.append('source', 'channel_header')
             Form.append('reconnect', 'false')
-            Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
             Form.append('regions', 'us-east-2') 
             const response = await axios.post(
                 //url 
@@ -589,7 +616,7 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
                 //config
                 {
                     headers: {
-                        'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
+                        //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
                         'Cookie': cookieformatted,
                         //read as form not json 
                         'Content-Type': 'application/x-www-form-urlencoded',
