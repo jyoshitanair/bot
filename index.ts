@@ -552,12 +552,17 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
     await ack()
     console.log("made it!")
     try {
-        const cookieformatted = `d=${encodeURIComponent(Bun.env.SLACK_XOXD_TOKEN ?? "")}`
+        const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}; d-s=${Bun.env.SLACK_XOXD_S_TOKEN ?? ""}`
+        console.log(cookieformatted)
         //slack rooms needs a form? 
         const Form = new URLSearchParams
-        Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+        //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         Form.append('channel_id', command.channel_id)
         Form.append('active', 'true')
+        Form.append('background-sharing', 'false')
+        Form.append('source', 'channel_header')
+        Form.append('reconnect', 'false')
+        
         const response = await axios.post(
             //url 
             'https://hackclub.slack.com/api/rooms.create',
@@ -566,12 +571,15 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
             //config
             {
                 headers: {
+                    'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
                     'Cookie': cookieformatted,
                     //read as form not json 
                     'Content-Type': 'application/x-www-form-urlencoded',
                     //windows + chrome
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Origin': 'https://app.slack.com'
+                    'Origin': 'https://app.slack.com',
+                    'Referer': 'https://app.slack.com/',
+                    //'Host': 'https://hackclub.slack.com/api/rooms.create'
                 }
             }
         );
