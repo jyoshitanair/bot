@@ -10,22 +10,58 @@ async function getSong(){
     try{
         const urlugh =  await axios.get(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${Bun.env.LAST_FM_USERNAME}&api_key=${Bun.env.LAST_FM_API}&format=json&limit=1`);
         const latestTrack = urlugh?.data?.recenttracks?.track?.[0];
-        if(latestTrack && latestTrack['@attr'].nowplaying === true){
+        if(latestTrack && latestTrack['@attr'].nowplaying === "true"){
             console.log(latestTrack)
-            
-            //"@attr": {
-            //nowplaying: "true",
-
+            const track = {
+                title: latestTrack.name,
+                song: latestTrack.artist['#text'],
+            }
+            const statusmsg = `${track.title} by ${track.song}`
+            const formtrest = new URLSearchParams()
+            formtrest.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+            formtrest.append('profile', JSON.stringify({
+                status_text: statusmsg, 
+                status_emoji: ":vibepartycat:",
+                //never
+                status_expiration: 0, 
+            })) //obj to sring
+             const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}`
+             const response = await axios.post(
+                //url 
+                'https://hackclub.slack.com/api/users.profile.set',
+                //data 
+                formtrest,
+                //config
+                {
+                    headers: {
+                        //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
+                        'Cookie': cookieformatted,
+                        //read as form not json 
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        //windows + chrome
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Origin': 'https://app.slack.com',
+                        'Referer': 'https://app.slack.com/',
+                        //client request
+                        'x-slack-user-agent': 'slack-web-client-v2'
+                    }
+                }
+            );
         }
     }catch(err){
-
+        console.log("meow i failed :/")
     }
 }
 
 
 
+//run forever :P
 
-
+getSong()
+//like timeout but repeats 10 sec
+setInterval(() => {
+    getSong()
+}, 10000)
 //supabase
 import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = Bun.env.SUPABASE_URL || ""
