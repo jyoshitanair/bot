@@ -1,4 +1,5 @@
 import { App, LogLevel } from "@slack/bolt";
+import { chromium } from "playwright"
 import { OpenRouter } from "@openrouter/sdk"
 import { WebClient } from "@slack/web-api"
 import axios from 'axios';
@@ -550,40 +551,57 @@ function chooseWinner(player1: [string, string], player2: [string, string]): str
 //start a huddle >.<
 app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
     await ack()
-    console.log("made it!")
     try {
         const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}; d-s=${Bun.env.SLACK_XOXD_S_TOKEN ?? ""}`
-        console.log(cookieformatted)
-        //slack rooms needs a form? 
-        const Form = new URLSearchParams
-        //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
-        Form.append('channel_id', command.channel_id)
-        Form.append('active', 'true')
-        Form.append('background-sharing', 'false')
-        Form.append('source', 'channel_header')
-        Form.append('reconnect', 'false')
-        
-        const response = await axios.post(
-            //url 
-            'https://hackclub.slack.com/api/rooms.create',
-            //data 
-            Form,
-            //config
-            {
-                headers: {
+        const Formdos = new URLSearchParams
+        Formdos.append('presence', 'auto')
+        const meow = await axios.post(
+            'https://hackclub.slack.com/api/users.setPresence',
+            Formdos, //no data
+            { 
+                headers:{
                     'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
                     'Cookie': cookieformatted,
-                    //read as form not json 
+                        //read as form not json 
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    //windows + chrome
+                        //windows + chrome
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Origin': 'https://app.slack.com',
-                    'Referer': 'https://app.slack.com/',
-                    //'Host': 'https://hackclub.slack.com/api/rooms.create'
                 }
             }
-        );
-        console.log(response.data)
+        )
+        console.log(meow.data)
+        //real
+            //slack rooms needs a form? 
+            const Form = new URLSearchParams
+            //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+            Form.append('channel_id', command.channel_id)
+            Form.append('active', 'true')
+            Form.append('background-sharing', 'false')
+            Form.append('source', 'channel_header')
+            Form.append('reconnect', 'false')
+            
+            const response = await axios.post(
+                //url 
+                'https://hackclub.slack.com/api/rooms.create',
+                //data 
+                Form,
+                //config
+                {
+                    headers: {
+                        'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
+                        'Cookie': cookieformatted,
+                        //read as form not json 
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        //windows + chrome
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Origin': 'https://app.slack.com',
+                        'Referer': 'https://app.slack.com/',
+                        //client request
+                        'x-slack-user-agent': 'slack-web-client-v2'
+                    }
+                }
+            );
+            console.log(response.data)
     } catch (e) {
         await userClient.chat.postEphemeral({
             channel: command.channel_id,
