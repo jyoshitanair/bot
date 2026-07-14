@@ -579,10 +579,11 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
             Form.append('background-sharing', 'false')
             Form.append('source', 'channel_header')
             Form.append('reconnect', 'false')
-            
+            Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+            Form.append('regions', 'us-east-2') 
             const response = await axios.post(
                 //url 
-                'https://hackclub.slack.com/api/rooms.create',
+                'https://hackclub.slack.com/api/rooms.join',
                 //data 
                 Form,
                 //config
