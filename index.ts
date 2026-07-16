@@ -43,6 +43,8 @@ async function getSong() {
         }
         const formtrest = new URLSearchParams()
         console.log(statusmsg)
+        if (statusmsg == lastsong) return;
+        lastsong = statusmsg
         formtrest.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         formtrest.append('profile', JSON.stringify({
             status_text: statusmsg,
