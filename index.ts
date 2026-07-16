@@ -36,11 +36,7 @@ async function getSong() {
             if (!title || !song || title.trim() === "" || song.trim() === "") {
                 statusmsg = "not listening to anything rn ~ :dango: "
             } else {
-                const track = {
-                    title: title,
-                    song: song,
-                }
-                statusmsg = `${track.title} by ${track.song}`
+                statusmsg = `${title} by ${song}`
             }
         } else {
             statusmsg = "not listening to anything rn ~ :dango: "
