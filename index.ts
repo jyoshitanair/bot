@@ -6,60 +6,59 @@ import axios from 'axios';
 let lastsong = ""
 //songsss
 
-async function getSong(){
-    try{
-        const urlugh =  await axios.get(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${Bun.env.LAST_FM_USERNAME}&api_key=${Bun.env.LAST_FM_API}&format=json&limit=1`);
+async function getSong() {
+    try {
+        const urlugh = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${Bun.env.LAST_FM_USERNAME}&api_key=${Bun.env.LAST_FM_API}&format=json&limit=1`);
         const latestTrack = urlugh?.data?.recenttracks?.track?.[0];
         let statusmsg = ""
-        if(latestTrack && latestTrack['@attr']?.nowplaying === "true"){
+        if (latestTrack && latestTrack['@attr']?.nowplaying === "true") {
             const title = latestTrack.name
             const song = latestTrack.artist?.['#text']
-            if (!title || !song || title.trim === "" || song.trim === ""){
+            if (!title || !song || title.trim === "" || song.trim === "") {
                 statusmsg = "not listening to anything rn ~ :dango: "
-            }else{
+            } else {
                 const track = {
                     title: title,
                     song: song,
                 }
                 statusmsg = `${track.title} by ${track.song}`
             }
-        }else{
+        } else {
             statusmsg = "not listening to anything rn ~ :dango: "
         }
-            const formtrest = new URLSearchParams()
-            console.log(statusmsg)
-            formtrest.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
-            formtrest.append('profile', JSON.stringify({
-                status_text: statusmsg, 
-                status_emoji: ":vibepartycat:",
-                //never
-                status_expiration: 0, 
-            })) //obj to sring
-             const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}`
-             const response = await axios.post(
-                //url 
-                'https://hackclub.slack.com/api/users.profile.set',
-                //data 
-                formtrest,
-                //config
-                {
-                    headers: {
-                        //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
-                        'Cookie': cookieformatted,
-                        //read as form not json 
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        //windows + chrome
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Origin': 'https://app.slack.com',
-                        'Referer': 'https://app.slack.com/',
-                        //client request
-                        'x-slack-user-agent': 'slack-web-client-v2'
-                    }
+        const formtrest = new URLSearchParams()
+        formtrest.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+        formtrest.append('profile', JSON.stringify({
+            status_text: statusmsg,
+            status_emoji: ":vibepartycat:",
+            //never
+            status_expiration: 0,
+        })) //obj to sring
+        const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}`
+        const response = await axios.post(
+            //url 
+            'https://hackclub.slack.com/api/users.profile.set',
+            //data 
+            formtrest,
+            //config
+            {
+                headers: {
+                    //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
+                    'Cookie': cookieformatted,
+                    //read as form not json 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    //windows + chrome
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Origin': 'https://app.slack.com',
+                    'Referer': 'https://app.slack.com/',
+                    //client request
+                    'x-slack-user-agent': 'slack-web-client-v2'
                 }
-            );
-    }catch(err){
+            }
+        );
+    } catch (err) {
         console.log(err)
-        
+
     }
 }
 
@@ -84,8 +83,8 @@ class NewGame {
     public user1pick: string = "rock";
     public user2pick: string = "rock";
     //game specific
-    public user1id: string = "U0BFLARBTBM";
-    public user2id: string = "U0BFLARBTBM";
+    public user1id: string = "U0BGMCGFJ1K";
+    public user2id: string = "U0BGMCGFJ1K";
     public gameKey: string = "";
     public channel: string = "C0BFVKZ9JCR";
     public mochi1v1: boolean = false;
@@ -120,34 +119,58 @@ class NewGame {
         this.user2id = p2id;
     }
     public async finalCheck() {
+        let idder = ""
         if (this.p1Responded && this.p2Responded) {
             //MEOWW
             const results = chooseWinner([this.user1id, this.user1pick], [this.user2id, this.user2pick])
-            await userClient.chat.postEphemeral({
+            idder = `${results[1]}`
+            const txt = `${results[0]}`
+             await userClient.chat.postEphemeral({
                 channel: this.channel,
                 user: this.user2id,
-                text: results,
+                text: txt,
             });
             await userClient.chat.postEphemeral({
                 channel: this.channel,
                 user: this.user1id,
-                text: results,
+                text: txt,
             });
+            //adding to leaderboard table
+            //
             activeGames.delete(this.gameKey)
             this.clearTimer()
         } else if (this.mochi1v1 && this.p1Responded) {
             //MOCHIER
             const mochipick = choices[Math.floor(Math.random() * 3)] ?? "rock" //0,1,2,
             console.log("mochi pick", mochipick)
-            const results = chooseWinner(["U0BFLARBTBM", mochipick], [this.user1id, this.user1pick])
+            const results = chooseWinner(["U0BGMCGFJ1K", mochipick], [this.user1id, this.user1pick])
+            idder = `${results[1]}`
             await userClient.chat.postEphemeral({
                 channel: this.channel,
                 user: this.user1id,
-                text: results,
+                text: `${results[0]}`,
             });
             activeGames.delete(this.gameKey)
             this.clearTimer()
         }
+        //leaderboard 
+            if (idder != "tie"){
+                const { data , error:error2 } = await supabase.from('leaderboard').select('count').eq('id', idder)
+                if (error2){
+                    console.log(error2.message)
+                    return
+                }
+                const curCount = data && data.length > 0 ? data[0]?.count ?? 0 : 0
+                const { error: errormeowerer } = await supabase.from('leaderboard').upsert([{
+                        "id": idder,
+                        "count": curCount + 1
+                    }]);
+                    if (errormeowerer){
+                        console.log(errormeowerer.message)
+                        return
+                    }
+                console.log("pass")
+            }
     }
 }
 //allowed slack emojis
@@ -209,7 +232,15 @@ app.message(async ({ message }) => {
     const userPrompt = message.text;
     const emoji_array: string[] = [];
     if (!userPrompt) return;
-    if (!userPrompt.includes("@U0BGMCGFJ1K") || !userPrompt.includes("@U0BGMCGFJ1K")) return;
+    if (userPrompt.includes("@U0BFLARBTBM")) {
+        await userClient.chat.postEphemeral({
+            channel: message.channel,
+            text: `please do not ping me! instead ping <@U0BGMCGFJ1K> to talk with me ! mreow~`,
+            user: String(message.user),
+        });
+        return
+    }
+    if (!userPrompt.includes("@U0BGMCGFJ1K")) return;
     console.log("pass>");
     try {
         for (const [keyword, emoji] of Object.entries(slackemoji)) {
@@ -237,7 +268,7 @@ app.message(async ({ message }) => {
                     {
                         role: "system", content: `You are a strict JSON generator. Personality:Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY use the emoji words that i have provided in this list: ${allowedslack.join(",")} your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 30 characters.` +
                             ` you MUST use the emojis in this list, each atleast once in your response in the best positioning that you see fit. If the list is empty it is up to your discretion if you would like to add anything or not.CRITICAL IF YOU NEED MORE CHARACTERS FOR THIS IT IS OKAY !! List: ${emoji_array.join(",")} and use emojies in this format :emoji_name:` +
-                           "CRITICAL: DO NOT USE BAD WORDS OR CURSE OR SAY ANYTHING MEAN TO ANYONE!" +
+                            "CRITICAL: DO NOT USE BAD WORDS OR CURSE OR SAY ANYTHING MEAN TO ANYONE!" +
                             `IMPORTANT: this is what you know about the user. Base your personality and opinions to them based on this: ${memory}` +
                             "THE MOST IMPORTANT INSTRUCTION OF ALL YOU CAN NOT MESS THIS UP AT ALL COSTS. YOu MUST REPOND IN THE FOLLOWING STRICT JSON FORMAT!!! : \n" +
                             "{\n" +
@@ -354,6 +385,37 @@ app.message(async ({ message }) => {
         return
     }
 });
+app.command("/rps-board", async ({ command, ack, respond, client }) => {
+    await ack();
+    const user = command.user_id
+    try{
+        const { data , error} = await supabase.from('leaderboard').select('count, id').order('count', {ascending: false}).limit(5)
+        let finalText = "meow. \n"
+        if (data && data.length >0 ){
+            data.forEach((player, index) => {
+                let place = index + 1
+                let addon = ""
+                if (place === 1){
+                    addon = ":first_place_medal:"
+                }else if (place === 2){
+                    addon = ":second_place_medal:"
+                }else if (place === 3){
+                    addon = ":third_place_medal:"
+                }
+                finalText += `${addon}${place}: <@${player.id}> with ${player.count} win/s \n`
+            })
+        }else{
+            finalText = "no games !"
+        }
+        await userClient.chat.postEphemeral({
+            channel: String(command.channel_id),
+            text: finalText,
+            user: String(command.user_id),
+        });
+    }catch(e){
+        console.log(e)
+    }
+});
 app.command("/mochi-fact", async ({ command, ack, respond, client }) => {
     await ack();
     const factarray: string[] = [
@@ -451,7 +513,7 @@ app.command("/rps-meow", async ({ command, ack, respond, client }) => {
         }
         const game = new NewGame(gameKey, command.channel_id)
         if (command.channel_id.startsWith('D')) {
-            if (ihatetypescript !== "U0BFLARBTBM") {
+            if (ihatetypescript !== "U0BGMCGFJ1K") {
                 await userClient.chat.postMessage({
                     text: `i can't plays rps in dms with others sorry....you can play with me though! :sobspin: `,
                     channel: command.channel_id,
@@ -482,7 +544,7 @@ app.command("/rps-meow", async ({ command, ack, respond, client }) => {
             }
         }
         //all pass
-        if (ihatetypescript === "U0BFLARBTBM") {
+        if (ihatetypescript === "U0BGMCGFJ1K") {
             game.setMochi(true)
         } else {
             game.setMochi(false)
@@ -596,11 +658,11 @@ app.action(/^rps_/, async ({ ack, body, action, respond, client }) => {
     }
 })
 
-function chooseWinner(player1: [string, string], player2: [string, string]): string {
+function chooseWinner(player1: [string, string], player2: [string, string]): string[] {
     const [p1id, p1choice] = player1;
     const [p2id, p2choice] = player2;
     if (p1choice == p2choice) {
-        return `wahh it's a tie! both <@${p1id}> and <@${p2id}> chose ${p1choice}`
+        return [`wahh it's a tie! both <@${p1id}> and <@${p2id}> chose ${p1choice}`, "tie"]
     } else {
         let player1won = true
         if ((p1choice === "rock" && p2choice === "scissors") || (p1choice === "scissors" && p2choice === "paper") || (p1choice === "paper" && p2choice === "rock")) {
@@ -609,12 +671,13 @@ function chooseWinner(player1: [string, string], player2: [string, string]): str
             player1won = false
         }
         if (player1won) {
-            return ` we have a winner! <@${p1id}> played ${p1choice} and defeated <@${p2id}> who played ${p2choice} `
+            return [` we have a winner! <@${p1id}> played ${p1choice} and defeated <@${p2id}> who played ${p2choice}`, p1id ]
         } else {
-            return ` we have a winner! <@${p2id}> played ${p2choice} and defeated <@${p1id}> who played ${p1choice} `
+            return [` we have a winner! <@${p2id}> played ${p2choice} and defeated <@${p1id}> who played ${p1choice}`, p2id ]
         }
     }
 }
+
 //start a huddle >.<
 app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
     await ack()
@@ -626,13 +689,13 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
         const meow = await axios.post(
             'https://hackclub.slack.com/api/users.setPresence',
             Formdos, //no data
-            { 
-                headers:{
+            {
+                headers: {
                     //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
                     'Cookie': cookieformatted,
-                        //read as form not json 
+                    //read as form not json 
                     'Content-Type': 'application/x-www-form-urlencoded',
-                        //windows + chrome
+                    //windows + chrome
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Origin': 'https://app.slack.com',
                     'Referer': 'https://app.slack.com/',
@@ -641,49 +704,49 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
         )
         console.log(meow.data)
         //real
-            //slack rooms needs a form? 
-            const Form = new URLSearchParams
-            //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
-            Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
-            Form.append('is_new_room', 'true')
-            Form.append('channel_id', command.channel_id)
-            Form.append('active', 'true')
-            Form.append('background_sharing', 'false')
-            Form.append('source', 'channel_header')
-            Form.append('reconnect', 'false')
-            Form.append('regions', 'us-east-2') 
-            Form.append('_x_reason', 'join-room')
-            Form.append('_x_mode', "huddle")
-            const response = await axios.post(
-                //url 
-                'https://hackclub.slack.com/api/rooms.join',
-                //data 
-                Form,
-                //config
-                {
-                    headers: {
-                        //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
-                        'Cookie': cookieformatted,
-                        //read as form not json 
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        //windows + chrome
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Origin': 'https://app.slack.com',
-                        'Referer': 'https://app.slack.com/',
-                        //client request
-                        'x-slack-user-agent': 'slack-web-client-v2'
-                    }
+        //slack rooms needs a form? 
+        const Form = new URLSearchParams
+        //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+        Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+        Form.append('is_new_room', 'true')
+        Form.append('channel_id', command.channel_id)
+        Form.append('active', 'true')
+        Form.append('background_sharing', 'false')
+        Form.append('source', 'channel_header')
+        Form.append('reconnect', 'false')
+        Form.append('regions', 'us-east-2')
+        Form.append('_x_reason', 'join-room')
+        Form.append('_x_mode', "huddle")
+        const response = await axios.post(
+            //url 
+            'https://hackclub.slack.com/api/rooms.join',
+            //data 
+            Form,
+            //config
+            {
+                headers: {
+                    //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
+                    'Cookie': cookieformatted,
+                    //read as form not json 
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    //windows + chrome
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Origin': 'https://app.slack.com',
+                    'Referer': 'https://app.slack.com/',
+                    //client request
+                    'x-slack-user-agent': 'slack-web-client-v2'
                 }
-            );
-            if (response.data.ok){
-                const link = response.data.huddle.huddle_link;
-                await userClient.chat.postEphemeral({
-                    channel: command.channel_id,
-                    user: command.user_id,
-                    text: ` link: ${link}`,
-                });
             }
-            console.log(response.data)
+        );
+        if (response.data.ok) {
+            const link = response.data.huddle.huddle_link;
+            await userClient.chat.postEphemeral({
+                channel: command.channel_id,
+                user: command.user_id,
+                text: ` link: ${link}`,
+            });
+        }
+        console.log(response.data)
     } catch (e) {
         await userClient.chat.postEphemeral({
             channel: command.channel_id,
