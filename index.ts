@@ -33,7 +33,7 @@ async function getSong() {
         if (latestTrack && latestTrack['@attr']?.nowplaying === "true") {
             const title = latestTrack.name
             const song = latestTrack.artist?.['#text']
-            if (!title || !song || title.trim === "" || song.trim === "") {
+            if (!title || !song || title.trim() === "" || song.trim() === "") {
                 statusmsg = "not listening to anything rn ~ :dango: "
             } else {
                 const track = {
@@ -59,7 +59,7 @@ async function getSong() {
             //url 
             'https://hackclub.slack.com/api/users.profile.set',
             //data 
-            formtrest,
+            formtrest.toString(),
             //config
             {
                 headers: {
