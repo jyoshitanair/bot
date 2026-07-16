@@ -1,4 +1,4 @@
-import { App, LogLevel } from "@slack/bolt";
+import { App, LogLevel, webApi } from "@slack/bolt";
 import { OpenRouter } from "@openrouter/sdk"
 import { WebClient } from "@slack/web-api"
 import axios from 'axios';
@@ -11,16 +11,16 @@ const client = new OpenRouter({
 async function helper_huddle() {
     const response3 = await client.chat.send({
         chatRequest: {
-        model: "moonshotai/kimi-k2",
-        messages: [
-            {
-                role: "system", content: `Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY CRITICAL CRITICAL use the emoji words that i have provided in this list: ${allowedslack.join(",")} ONLY!do NOT use more thatn 2-3 though!! VERY IMPORTANT. your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 40 characters.` +
-                `GOAL:CRITICAl!. DO not give any intros or create a response longer than 1 line . no newlines are allowed! Given your background you must randomly generate a goofy question that is an icebreaker. for example 'if a fly loses it's wings is it a walk now?'  ` +
-                "CRITICAL: DO NOT USE BAD WORDS OR CURSE OR SAY ANYTHING MEAN!"
-            },
+            model: "moonshotai/kimi-k2",
+            messages: [
+                {
+                    role: "system", content: `Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY CRITICAL CRITICAL use the emoji words that i have provided in this list: ${allowedslack.join(",")} ONLY!do NOT use more thatn 2-3 though!! VERY IMPORTANT. your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 40 characters.` +
+                        `GOAL:CRITICAl!. DO not give any intros or create a response longer than 1 line . no newlines are allowed! Given your background you must randomly generate a goofy question that is an icebreaker. for example 'if a fly loses it's wings is it a walk now?'  ` +
+                        "CRITICAL: DO NOT USE BAD WORDS OR CURSE OR SAY ANYTHING MEAN!"
+                },
             ],
             stream: false
-                }
+        }
     });
     const final_response3 = response3?.choices?.[0]?.message?.content;
     return final_response3 ?? " if a fly loses it's wings... is it a walk now? :cat-think:"
@@ -89,6 +89,7 @@ setInterval(() => {
 }, 10000)
 //supabase
 import { createClient } from '@supabase/supabase-js'
+import type { Message } from "@slack/web-api/dist/types/response/ChannelsHistoryResponse";
 const supabaseUrl = Bun.env.SUPABASE_URL || ""
 const supabaseKey = Bun.env.SUPABASE_PUBLISHABLE_KEY || ""
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -144,7 +145,7 @@ class NewGame {
             const results = chooseWinner([this.user1id, this.user1pick], [this.user2id, this.user2pick])
             idder = `${results[1]}`
             const txt = `${results[0]}`
-             await userClient.chat.postEphemeral({
+            await userClient.chat.postEphemeral({
                 channel: this.channel,
                 user: this.user2id,
                 text: txt,
@@ -175,23 +176,23 @@ class NewGame {
             ggs = true
         }
         //leaderboard 
-            if (idder != "tie" && ggs === true){
-                const { data , error:error2 } = await supabase.from('leaderboard').select('count').eq('id', idder)
-                if (error2){
-                    console.log(error2.message)
-                    return
-                }
-                const curCount = data && data.length > 0 ? data[0]?.count ?? 0 : 0
-                const { error: errormeowerer } = await supabase.from('leaderboard').upsert([{
-                        "id": idder,
-                        "count": curCount + 1
-                    }]);
-                    if (errormeowerer){
-                        console.log(errormeowerer.message)
-                        return
-                    }
-                console.log("pass")
+        if (idder != "tie" && ggs === true) {
+            const { data, error: error2 } = await supabase.from('leaderboard').select('count').eq('id', idder)
+            if (error2) {
+                console.log(error2.message)
+                return
             }
+            const curCount = data && data.length > 0 ? data[0]?.count ?? 0 : 0
+            const { error: errormeowerer } = await supabase.from('leaderboard').upsert([{
+                "id": idder,
+                "count": curCount + 1
+            }]);
+            if (errormeowerer) {
+                console.log(errormeowerer.message)
+                return
+            }
+            console.log("pass")
+        }
     }
 }
 //allowed slack emojis
@@ -238,13 +239,23 @@ app.message(async (event) => {
     })
 });
 */
+function helper_bot(msg: Message): boolean {
+    //true = invalid
+    if (msg.bot_id === "B0BG9CRD23Z") return true
+    if (msg.bot_profile?.name === "do not use") return true
+    if (msg.bot_profile?.deleted === true) return true
+    if (msg.bot_profile?.id === "B0BG9CRD23Z") return true
+    if (msg.text?.trim() === "") return true
+    if (!msg.user) return true
+    return false
+}
 app.message(async ({ message }) => {
     console.log("jello>");
     getSong()
     if (!message) return;
     /* bascially a subtype is a special message like a join - only look at normal messges hv no subtype*/
     if (message.subtype) return;
-    if ('bot_id' in message) return; 
+    if ('bot_id' in message) return;
     if (message.user === "U0BFLARBTBM") return;
     //dont respond to the bot posts :/ 
     /* === is typesafe*/
@@ -252,6 +263,7 @@ app.message(async ({ message }) => {
     const userPrompt = message.text;
     const emoji_array: string[] = [];
     if (!userPrompt) return;
+    if (userPrompt?.trim() === "") return;
     if (userPrompt.includes("@U0BFLARBTBM")) {
         await userClient.chat.postEphemeral({
             channel: message.channel,
@@ -262,6 +274,29 @@ app.message(async ({ message }) => {
     }
     if (!userPrompt.includes("@U0BGMCGFJ1K")) return;
     console.log("pass>");
+    ///get last messages in the chat
+    let last3mssg: string[][] = []
+    let cursor: string | undefined = undefined
+    while (last3mssg.length < 4) {
+        const history = await userClient.conversations.history({
+            channel: message.channel,
+            limit: 20,
+            cursor: cursor,
+        });
+        if (!history?.messages) return
+        for (const msg of history.messages ?? []) {
+            if (helper_bot(msg as Message) === false) {
+                //valid
+                const len = last3mssg.push([msg.text ?? "", msg?.user ?? ""])
+                if (len >= 4) break
+            }
+        }
+        if (last3mssg.length >= 4) break
+        //next page :P
+        cursor = history.response_metadata?.next_cursor
+        if (!cursor) break
+    }
+    console.log(last3mssg)
     try {
         for (const [keyword, emoji] of Object.entries(slackemoji)) {
             if (userPrompt.toLowerCase().includes(keyword)) {
@@ -304,7 +339,7 @@ app.message(async ({ message }) => {
                             'If there are no new updated facts or anything that is not important about the user leave the fields new_facts and updated_valules BLANK! Any information provided to you can EITHER be a new fact or an updated fact. Not both. for example if the user wants to update their favorite color that is only an updated fact. However if there are BOTH new facts AND updated facts then you may fill out BOTH fields :D'
 
                     },
-                    { role: "user", content: userPrompt }
+                    { role: "user", content: `These are the last messages from the chat that you are having with the user!  Your id is <@U0BGMCGFJ1K> and anyone else is other users! use this as context for what to respond with! ${last3mssg}`}
                 ],
                 stream: false
             }
@@ -313,9 +348,9 @@ app.message(async ({ message }) => {
         console.log(final_response)
         if (!final_response) {
             await userClient.chat.postMessage({
-                    channel: message.channel,
-                    text: "(OWO) i don't know that one...",
-                });
+                channel: message.channel,
+                text: "(OWO) i don't know that one...",
+            });
             return
         }
         try {
@@ -414,23 +449,23 @@ app.message(async ({ message }) => {
 app.command("/rps-board", async ({ command, ack, respond, client }) => {
     await ack();
     const user = command.user_id
-    try{
-        const { data , error} = await supabase.from('leaderboard').select('count, id').order('count', {ascending: false}).limit(5)
+    try {
+        const { data, error } = await supabase.from('leaderboard').select('count, id').order('count', { ascending: false }).limit(5)
         let finalText = "meow. \n"
-        if (data && data.length >0 ){
+        if (data && data.length > 0) {
             data.forEach((player, index) => {
                 let place = index + 1
                 let addon = ""
-                if (place === 1){
+                if (place === 1) {
                     addon = ":first_place_medal:"
-                }else if (place === 2){
+                } else if (place === 2) {
                     addon = ":second_place_medal:"
-                }else if (place === 3){
+                } else if (place === 3) {
                     addon = ":third_place_medal:"
                 }
                 finalText += `${addon}${place}: <@${player.id}> with ${player.count} win/s \n`
             })
-        }else{
+        } else {
             finalText = "no games !"
         }
         await userClient.chat.postEphemeral({
@@ -438,7 +473,7 @@ app.command("/rps-board", async ({ command, ack, respond, client }) => {
             text: finalText,
             user: String(command.user_id),
         });
-    }catch(e){
+    } catch (e) {
         console.log(e)
     }
 });
@@ -699,9 +734,9 @@ function chooseWinner(player1: [string, string], player2: [string, string]): str
             player1won = false
         }
         if (player1won) {
-            return [` we have a winner! <@${p1id}> played ${p1choice} and defeated <@${p2id}> who played ${p2choice}`, p1id ]
+            return [` we have a winner! <@${p1id}> played ${p1choice} and defeated <@${p2id}> who played ${p2choice}`, p1id]
         } else {
-            return [` we have a winner! <@${p2id}> played ${p2choice} and defeated <@${p1id}> who played ${p1choice}`, p2id ]
+            return [` we have a winner! <@${p2id}> played ${p2choice} and defeated <@${p1id}> who played ${p1choice}`, p2id]
         }
     }
 }
@@ -774,7 +809,7 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
                 text: ` hello! greetings from mochi! <@${command.user_id}> has started a huddle! \n link: ${link} \n. I have decided that the topic is... ${topic}`,
             });
         }
-        if (response.data.error == "cannot_huddle_here"){
+        if (response.data.error == "cannot_huddle_here") {
             await userClient.chat.postEphemeral({
                 channel: command.channel_id,
                 user: command.user_id,
