@@ -46,6 +46,7 @@ async function getSong() {
             statusmsg = "not listening to anything rn ~ :dango: "
         }
         const formtrest = new URLSearchParams()
+        console.log(statusmsg)
         formtrest.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         formtrest.append('profile', JSON.stringify({
             status_text: statusmsg,
