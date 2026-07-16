@@ -10,14 +10,24 @@ async function getSong(){
     try{
         const urlugh =  await axios.get(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${Bun.env.LAST_FM_USERNAME}&api_key=${Bun.env.LAST_FM_API}&format=json&limit=1`);
         const latestTrack = urlugh?.data?.recenttracks?.track?.[0];
-        if(latestTrack && latestTrack['@attr'].nowplaying === "true"){
-            console.log(latestTrack)
-            const track = {
-                title: latestTrack.name,
-                song: latestTrack.artist['#text'],
+        let statusmsg = ""
+        if(latestTrack && latestTrack['@attr']?.nowplaying === "true"){
+            const title = latestTrack.name
+            const song = latestTrack.artist?.['#text']
+            if (!title || !song || title.trim === "" || song.trim === ""){
+                statusmsg = "not listening to anything rn ~ :dango: "
+            }else{
+                const track = {
+                    title: title,
+                    song: song,
+                }
+                statusmsg = `${track.title} by ${track.song}`
             }
-            const statusmsg = `${track.title} by ${track.song}`
+        }else{
+            statusmsg = "not listening to anything rn ~ :dango: "
+        }
             const formtrest = new URLSearchParams()
+            console.log(statusmsg)
             formtrest.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
             formtrest.append('profile', JSON.stringify({
                 status_text: statusmsg, 
@@ -47,13 +57,11 @@ async function getSong(){
                     }
                 }
             );
-        }
     }catch(err){
-        console.log("meow i failed :/")
+        console.log(err)
+        
     }
 }
-
-
 
 //run forever :P
 
@@ -612,7 +620,7 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
     await ack()
     try {
         const cookieformatted = `d=${Bun.env.SLACK_XOXD_TOKEN ?? ""}`
-        const Formdos = new URLSearchParams
+        const Formdos = new URLSearchParams()
         Formdos.append('presence', 'auto')
         Formdos.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         const meow = await axios.post(
@@ -631,19 +639,21 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
                 }
             }
         )
-        console.log("ps")
         console.log(meow.data)
         //real
             //slack rooms needs a form? 
             const Form = new URLSearchParams
             //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
             Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
+            Form.append('is_new_room', 'true')
             Form.append('channel_id', command.channel_id)
             Form.append('active', 'true')
-            Form.append('background-sharing', 'false')
+            Form.append('background_sharing', 'false')
             Form.append('source', 'channel_header')
             Form.append('reconnect', 'false')
             Form.append('regions', 'us-east-2') 
+            Form.append('_x_reason', 'join-room')
+            Form.append('_x_mode', "huddle")
             const response = await axios.post(
                 //url 
                 'https://hackclub.slack.com/api/rooms.join',
@@ -665,6 +675,14 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
                     }
                 }
             );
+            if (response.data.ok){
+                const link = response.data.huddle.huddle_link;
+                await userClient.chat.postEphemeral({
+                    channel: command.channel_id,
+                    user: command.user_id,
+                    text: ` link: ${link}`,
+                });
+            }
             console.log(response.data)
     } catch (e) {
         await userClient.chat.postEphemeral({
