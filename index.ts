@@ -139,6 +139,7 @@ class NewGame {
     }
     public async finalCheck() {
         let idder = ""
+        let ggs = false
         if (this.p1Responded && this.p2Responded) {
             //MEOWW
             const results = chooseWinner([this.user1id, this.user1pick], [this.user2id, this.user2pick])
@@ -158,6 +159,7 @@ class NewGame {
             //
             activeGames.delete(this.gameKey)
             this.clearTimer()
+            ggs = true
         } else if (this.mochi1v1 && this.p1Responded) {
             //MOCHIER
             const mochipick = choices[Math.floor(Math.random() * 3)] ?? "rock" //0,1,2,
@@ -171,9 +173,10 @@ class NewGame {
             });
             activeGames.delete(this.gameKey)
             this.clearTimer()
+            ggs = true
         }
         //leaderboard 
-            if (idder != "tie"){
+            if (idder != "tie" && ggs === true){
                 const { data , error:error2 } = await supabase.from('leaderboard').select('count').eq('id', idder)
                 if (error2){
                     console.log(error2.message)
