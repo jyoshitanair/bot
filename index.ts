@@ -274,8 +274,9 @@ app.message(async ({ message }) => {
         //memories from supabase
         const { data, error } = await supabase.from('userinfo').select('message').eq('slackid', message.user)
         if (error) {
-            await userClient.chat.postMessage({
+            await userClient.chat.postEphemeral({
                 channel: message.channel,
+                user: message.user,
                 text: `uh oh. supabase error! :sadge: ${error.message}`,
             });
             return
@@ -313,9 +314,9 @@ app.message(async ({ message }) => {
         console.log(final_response)
         if (!final_response) {
             await userClient.chat.postMessage({
-                channel: message.channel,
-                text: `(OWO) i don't know that one...`,
-            });
+                    channel: message.channel,
+                    text: "(OWO) i don't know that one...",
+                });
             return
         }
         try {
@@ -344,8 +345,9 @@ app.message(async ({ message }) => {
                         "message": JSON.stringify(singlefact),
                     }]);
                     if (errormeow) {
-                        await userClient.chat.postMessage({
+                        await userClient.chat.postEphemeral({
                             channel: message.channel,
+                            user: message.user,
                             text: `uh oh. something messed up! but it's not my fault :tired: ${errormeow.message}`,
                         });
                         return;
@@ -374,16 +376,18 @@ app.message(async ({ message }) => {
                         }).eq('id', uniqueid)
                         console.log(uniqueid)
                         if (errormeow2) {
-                            await userClient.chat.postMessage({
+                            await userClient.chat.postEphemeral({
                                 channel: message.channel,
+                                user: message.user,
                                 text: `uh oh. something messed up! 2 but it's not my fault :tired: ${errormeow2.message}`,
                             });
                             return;
                         }
                     }
                     if (errormeow3) {
-                        await userClient.chat.postMessage({
+                        await userClient.chat.postEphemeral({
                             channel: message.channel,
+                            user: message.user,
                             text: `uh oh. something messed up! but it's not my fault :tired: ${errormeow3.message}`,
                         });
                         return;
@@ -392,15 +396,17 @@ app.message(async ({ message }) => {
 
             }
         } catch (e) {
-            await userClient.chat.postMessage({
+            await userClient.chat.postEphemeral({
                 channel: message.channel,
+                user: message.user,
                 text: `mochi is tired...maybe we talk later?`,
             });
             return
         }
     } catch (e) {
-        await userClient.chat.postMessage({
+        await userClient.chat.postEphemeral({
             channel: message.channel,
+            user: message.user,
             text: `aw error: ${e}`,
         });
         return
@@ -492,8 +498,9 @@ app.command("/mochi-opinion", async ({ command, ack, respond, client: commandCli
                 text: `the verdict... ${final_response2}`,
             });
         } catch (e) {
-            await userClient.chat.postMessage({
-                channel: String(command.channel_id),
+            await userClient.chat.postEphemeral({
+                channel: command.channel_id,
+                user: command.user_id,
                 text: `aw error: ${e}`,
             });
         }
@@ -625,8 +632,9 @@ app.command("/rps-meow", async ({ command, ack, respond, client }) => {
             //ephemeral hidden public public
         });
     } else {
-        await userClient.chat.postMessage({
+        await userClient.chat.postEphemeral({
             channel: command.channel_id,
+            user: command.user_id,
             text: "Invalid/No user tagged :sobspin:",
         });
     }
