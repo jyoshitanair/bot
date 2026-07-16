@@ -95,6 +95,39 @@ const supabaseKey = Bun.env.SUPABASE_PUBLISHABLE_KEY || ""
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 const activeGames = new Map<string, NewGame>();
+const activeHuddles = new Map<string, NewHuddle>();
+class NewHuddle {
+    public link: string = ""
+    private timer: Timer = setTimeout(() => { }, 0);
+    public timestamp: string = ""
+    public channel: string = ""
+    constructor(link: string, channel: string,timestamp: string ) {
+        this.link = link;
+        this.timestamp = timestamp;
+        this.channel = channel;
+        this.timer = setTimeout(() => {
+            if (activeHuddles.has(this.link)) {
+                activeHuddles.delete(this.link)
+                console.log("bye bye")
+            }
+            //change message text
+
+            try{
+                this.bleh()
+            }catch(e){
+                console.log("huddle failed :/")
+            }
+        }, 300000);
+    }
+    async bleh() {
+        await userClient.chat.update({
+            channel: this.channel, 
+            ts: this.timestamp, 
+            text: "uh oh! this huddle has timed out ~"
+
+    });
+    }
+}
 class NewGame {
     private timer: Timer = setTimeout(() => { }, 0);
     public p2Responded: boolean = false;
@@ -808,6 +841,8 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
                 channel: command.channel_id,
                 text: ` hello! greetings from mochi! <@${command.user_id}> has started a huddle! \n link: ${link} \n. I have decided that the topic is... ${topic}`,
             });
+            new NewHuddle(link)
+            activeHuddles.delete(link)
         }
         if (response.data.error == "cannot_huddle_here") {
             await userClient.chat.postEphemeral({
