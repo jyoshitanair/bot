@@ -243,6 +243,7 @@ app.message(async ({ message }) => {
     /* bascially a subtype is a special message like a join - only look at normal messges hv no subtype*/
     if (message.subtype) return;
     if ('bot_id' in message) return; 
+    if (message.user === "U0BFLARBTBM") return;
     //dont respond to the bot posts :/ 
     /* === is typesafe*/
     //if (message.user !== 'U0AARL70NG5' ) return;
@@ -761,6 +762,13 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
             await userClient.chat.postMessage({
                 channel: command.channel_id,
                 text: ` hello! greetings from mochi! <@${command.user_id}> has started a huddle! \n link: ${link} \n. I have decided that the topic is... ${topic}`,
+            });
+        }
+        if (response.data.error == "cannot_huddle_here"){
+            await userClient.chat.postEphemeral({
+                channel: command.channel_id,
+                user: command.user_id,
+                text: ` Can not start your huddle here :sadge:`,
             });
         }
         console.log(response.data)
