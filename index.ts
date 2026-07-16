@@ -1,11 +1,30 @@
 import { App, LogLevel } from "@slack/bolt";
-import { chromium } from "playwright"
 import { OpenRouter } from "@openrouter/sdk"
 import { WebClient } from "@slack/web-api"
 import axios from 'axios';
 let lastsong = ""
 //songsss
-
+const client = new OpenRouter({
+    apiKey: Bun.env.API_KEY,
+    serverURL: "https://ai.hackclub.com/proxy/v1",
+});
+async function helper_huddle() {
+    const response3 = await client.chat.send({
+        chatRequest: {
+        model: "moonshotai/kimi-k2",
+        messages: [
+            {
+                role: "system", content: `Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY CRITICAL CRITICAL use the emoji words that i have provided in this list: ${allowedslack.join(",")} ONLY!do NOT use more thatn 2-3 though!! VERY IMPORTANT. your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 40 characters.` +
+                `GOAL:CRITICAl!. DO not give any intros or create a response longer than 1 line . no newlines are allowed! Given your background you must randomly generate a goofy question that is an icebreaker. for example 'if a fly loses it's wings is it a walk now?'  ` +
+                "CRITICAL: DO NOT USE BAD WORDS OR CURSE OR SAY ANYTHING MEAN!"
+            },
+            ],
+            stream: false
+                }
+    });
+    const final_response3 = response3?.choices?.[0]?.message?.content;
+    return final_response3 ?? " if a fly loses it's wings... is it a walk now? :cat-think:"
+}
 async function getSong() {
     try {
         const urlugh = await axios.get(`https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${Bun.env.LAST_FM_USERNAME}&api_key=${Bun.env.LAST_FM_API}&format=json&limit=1`);
@@ -201,10 +220,6 @@ const userClient = new WebClient(Bun.env.SLACK_USER_TOKEN);
 const XOXDclient = new WebClient(Bun.env.SLACK_XOXC_TOKEN, {
     headers: { Cookie: `d=${process.env.SLACK_XOXD_TOKEN}` }
 })
-const client = new OpenRouter({
-    apiKey: Bun.env.API_KEY,
-    serverURL: "https://ai.hackclub.com/proxy/v1",
-});
 const app = new App({
     token: Bun.env.SLACK_TOKEN,
     appToken: Bun.env.SLACK_APP_TOKEN,
@@ -227,6 +242,8 @@ app.message(async ({ message }) => {
     if (!message) return;
     /* bascially a subtype is a special message like a join - only look at normal messges hv no subtype*/
     if (message.subtype) return;
+    if ('bot_id' in message) return; 
+    //dont respond to the bot posts :/ 
     /* === is typesafe*/
     //if (message.user !== 'U0AARL70NG5' ) return;
     const userPrompt = message.text;
@@ -266,8 +283,8 @@ app.message(async ({ message }) => {
                 responseFormat: { type: "json_object" }, //kimi you BETTER use jsons around here....
                 messages: [
                     {
-                        role: "system", content: `You are a strict JSON generator. Personality:Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY use the emoji words that i have provided in this list: ${allowedslack.join(",")} your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 30 characters.` +
-                            ` you MUST use the emojis in this list, each atleast once in your response in the best positioning that you see fit. If the list is empty it is up to your discretion if you would like to add anything or not.CRITICAL IF YOU NEED MORE CHARACTERS FOR THIS IT IS OKAY !! List: ${emoji_array.join(",")} and use emojies in this format :emoji_name:` +
+                        role: "system", content: `You are a strict JSON generator. Personality:Your name is mochi. pronouns are (she/it). mochi also likes to use slack emojis a lot! example - :shark: however you may ONLY use the emoji words that i have provided in this list: ${allowedslack.join(",")}. this list is NOT like the other list i will provide you with. Do NOT use more than 2-3 of these in a single response!!! your friends are orpheus (orph she) a dinasour and heidi(she) a raccoon and dopple(she/it) a bot girl with a shark. you like boba. you do not like being called a bot. You are a cutesy cat girl but you don't show it. this means no flicking or perking up ears/tail or licking paws or anything like that. you just meow sometimes. you are a bit sassy sometimes. you love to use kamojis and emojies. You like to each mochi, you were born on pi day, you like anime and capybaras. if the user asks about anything else do not provide. always answer in short answers. keep it less than a sentence or under 40 charactesr.if you need to use emojies that can go over the 40 character limit. just the text must be under or close to 30 characters.` +
+                            ` you MUST use the emojis in this list, each atleast once in your response in the best positioning that you see fit.If the list is empty it is up to your discretion if you would like to add anything or not.CRITICAL IF YOU NEED MORE CHARACTERS FOR THIS IT IS OKAY !! these ARE not like the OTHER LIST. do use all the emojis in this list!! List: ${emoji_array.join(",")} and use emojies in this format :emoji_name:` +
                             "CRITICAL: DO NOT USE BAD WORDS OR CURSE OR SAY ANYTHING MEAN TO ANYONE!" +
                             `IMPORTANT: this is what you know about the user. Base your personality and opinions to them based on this: ${memory}` +
                             "THE MOST IMPORTANT INSTRUCTION OF ALL YOU CAN NOT MESS THIS UP AT ALL COSTS. YOu MUST REPOND IN THE FOLLOWING STRICT JSON FORMAT!!! : \n" +
@@ -740,10 +757,10 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
         );
         if (response.data.ok) {
             const link = response.data.huddle.huddle_link;
-            await userClient.chat.postEphemeral({
+            const topic = await helper_huddle()
+            await userClient.chat.postMessage({
                 channel: command.channel_id,
-                user: command.user_id,
-                text: ` link: ${link}`,
+                text: ` hello! greetings from mochi! <@${command.user_id}> has started a huddle! \n link: ${link} \n. I have decided that the topic is... ${topic}`,
             });
         }
         console.log(response.data)
