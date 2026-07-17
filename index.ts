@@ -442,7 +442,7 @@ app.message(async ({ message }) => {
                         continue
                     }
                     const singlefact2 = { [key2]: value2 }
-                    const { data: datameow, error: errormeow3 } = await supabase.from('userinfo').select('id').eq('slackid', message.user).filter("message", "has_key", key2) // and it must have quotes around it!! it checks if the message field contains key two and doesn't care about stuff before and after it! smart! ahh forget thisthis message thingy checks inside the message json field for the key key2 and if its there it returns the id. it checks if it is null lor not
+                    const { data: datameow, error: errormeow3 } = await supabase.from('userinfo').select('id').eq('slackid', message.user).like("message", `%"${key2}"%`) // and it must have quotes around it!! it checks if the message field contains key two and doesn't care about stuff before and after it! smart! ahh forget thisthis message thingy checks inside the message json field for the key key2 and if its there it returns the id. it checks if it is null lor not
                     const datameower = datameow as { id: any }[] | null | undefined;
                     const uniqueid = (datameower && datameower.length > 0) ? datameower[0]?.id : null
                     console.log("no unique idd")
