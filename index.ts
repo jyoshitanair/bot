@@ -1,9 +1,13 @@
-import { App, LogLevel, webApi } from "@slack/bolt";
+import { App, LogLevel} from "@slack/bolt";
 import { OpenRouter } from "@openrouter/sdk"
 import { WebClient } from "@slack/web-api"
 import axios from 'axios';
 let lastsong = ""
 //songsss
+//allowed slack emojis
+const allowedslack: string[] = [
+    "roo-so-excited", "smirk1", "cat-think", "cat-derp", "cat", "cat-woah", "cat-lurk", "cat-please", "cat-okay", "cat_blob", "cat-hype", "cat-hmm", "cat-think", "cat-think", "cat-think", "cat-think", "cat-think", "tbh_cute", "sobspin", "aaaaa-disintegrates", "ultrafastparrot", "pensive-wobble", "angrycat", "sadge"
+]
 const client = new OpenRouter({
     apiKey: Bun.env.API_KEY,
     serverURL: "https://ai.hackclub.com/proxy/v1",
@@ -105,19 +109,28 @@ class NewHuddle {
         this.link = link;
         this.timestamp = timestamp;
         this.channel = channel;
-        this.timer = setTimeout(() => {
+        //check if it exists
+        if (activeHuddles.has(link)){
+            activeHuddles.delete(this.link)
+            this.clearTimer()
+        }
+        this.timer = setTimeout(async () => {
             if (activeHuddles.has(this.link)) {
                 activeHuddles.delete(this.link)
                 console.log("bye bye")
             }
             //change message text
-
             try{
-                this.bleh()
+                await this.bleh()
             }catch(e){
-                console.log("huddle failed :/")
+                console.log(e)
             }
         }, 300000);
+    }
+    clearTimer() {
+        if (this.timer) {
+            clearTimeout(this.timer)
+        }
     }
     async bleh() {
         await userClient.chat.update({
@@ -228,10 +241,6 @@ class NewGame {
         }
     }
 }
-//allowed slack emojis
-const allowedslack: string[] = [
-    "roo-so-excited", "smirk1", "cat-think", "cat-derp", "cat", "cat-woah", "cat-lurk", "cat-please", "cat-okay", "cat_blob", "cat-hype", "cat-hmm", "cat-think", "cat-think", "cat-think", "cat-think", "cat-think", "tbh_cute", "sobspin", "aaaaa-disintegrates", "ultrafastparrot", "pensive-wobble", "angrycat", "sadge"
-]
 //my custom cat reactions
 //allowed slack emojis
 const slackemoji: { [key: string]: string } = {
@@ -254,7 +263,7 @@ const slackemoji: { [key: string]: string } = {
 };
 const userClient = new WebClient(Bun.env.SLACK_USER_TOKEN);
 const XOXDclient = new WebClient(Bun.env.SLACK_XOXC_TOKEN, {
-    headers: { Cookie: `d=${process.env.SLACK_XOXD_TOKEN}` }
+    headers: { Cookie: `d=${Bun.env.SLACK_XOXD_TOKEN}` }
 })
 const app = new App({
     token: Bun.env.SLACK_TOKEN,
@@ -433,7 +442,7 @@ app.message(async ({ message }) => {
                         continue
                     }
                     const singlefact2 = { [key2]: value2 }
-                    const { data: datameow, error: errormeow3 } = await supabase.from('userinfo').select('id').eq('slackid', message.user).like("message", `%"${key2}"%`) // and it must have quotes around it!! it checks if the message field contains key two and doesn't care about stuff before and after it! smart! ahh forget thisthis message thingy checks inside the message json field for the key key2 and if its there it returns the id. it checks if it is null lor not
+                    const { data: datameow, error: errormeow3 } = await supabase.from('userinfo').select('id').eq('slackid', message.user).filter("message", "has_key", key2) // and it must have quotes around it!! it checks if the message field contains key two and doesn't care about stuff before and after it! smart! ahh forget thisthis message thingy checks inside the message json field for the key key2 and if its there it returns the id. it checks if it is null lor not
                     const datameower = datameow as { id: any }[] | null | undefined;
                     const uniqueid = (datameower && datameower.length > 0) ? datameower[0]?.id : null
                     console.log("no unique idd")
@@ -784,7 +793,7 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
         Formdos.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         const meow = await axios.post(
             'https://hackclub.slack.com/api/users.setPresence',
-            Formdos, //no data
+            Formdos.toString(), //no data
             {
                 headers: {
                     //'Authorization': `Bearer ${Bun.env.SLACK_XOXC_TOKEN}`,
@@ -801,7 +810,7 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
         console.log(meow.data)
         //real
         //slack rooms needs a form? 
-        const Form = new URLSearchParams
+        const Form = new URLSearchParams()
         //Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         Form.append('token', Bun.env.SLACK_XOXC_TOKEN ?? "")
         Form.append('is_new_room', 'true')
@@ -837,12 +846,14 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
         if (response.data.ok) {
             const link = response.data.huddle.huddle_link;
             const topic = await helper_huddle()
-            await userClient.chat.postMessage({
+            const slackposter = await userClient.chat.postMessage({
                 channel: command.channel_id,
                 text: ` hello! greetings from mochi! <@${command.user_id}> has started a huddle! \n link: ${link} \n. I have decided that the topic is... ${topic}`,
             });
-            new NewHuddle(link)
-            activeHuddles.delete(link)
+            if (slackposter.ts){
+                const huddle = new NewHuddle(link, command.channel_id,slackposter.ts)
+                activeHuddles.set(link, huddle)
+            }
         }
         if (response.data.error == "cannot_huddle_here") {
             await userClient.chat.postEphemeral({
