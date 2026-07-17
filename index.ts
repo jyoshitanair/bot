@@ -849,6 +849,8 @@ app.command("/mochi-huddle", async ({ command, ack, respond, client }) => {
             const slackposter = await userClient.chat.postMessage({
                 channel: command.channel_id,
                 text: ` hello! greetings from mochi! <@${command.user_id}> has started a huddle! \n link: ${link} \n. I have decided that the topic is... ${topic}`,
+                unfurl_links:false,
+                unfurl_media: false
             });
             if (slackposter.ts){
                 const huddle = new NewHuddle(link, command.channel_id,slackposter.ts)
